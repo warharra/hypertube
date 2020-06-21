@@ -4,7 +4,6 @@ const router = express.Router()
 const {
   signup,
   signin,
-  verifyAccount,
   forgotPassword,
   recoverPassword,
   logout,
@@ -21,7 +20,6 @@ const { verifyToken } = require('../controllers/verifyToken')
 router.post('/signup', userSignupValidator, signup)
 router.post('/signin', userSigninValidator, signin)
 router.post('/logout', verifyToken, logout)
-router.post('/verifyAccount', verifyAccount)
 router.post('/forgotPassword', forgotPasswordValidator, forgotPassword)
 router.post('/recoverPassword', recoverPasswordValidator, recoverPassword)
 router.post('/verifyToken', verifyToken)

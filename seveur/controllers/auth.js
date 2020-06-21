@@ -182,47 +182,6 @@ exports.signin = async (req, res) => {
   })
 }
 
-exports.verifyAccount = (req, res) => {
-  const { uuid } = req.body
-
-  pool.getConnection((err, connection) => {
-    if (err) {
-      return res.status(500).json({
-        err: 'Internal error - Db down',
-      })
-    } else {
-      connection.query(
-        'SELECT * FROM User INNER JOIN Validate_email ON User.UserId = Validate_email.UserId WHERE Validate_email.Uuid = ?',
-        [uuid],
-        (err, result) => {
-          if (err) {
-            error.handleError(res, err, 'Internal error', 500, connection)
-          } else if (result.length != 0) {
-            //uuid found
-            connection.query(
-              'UPDATE User SET EmailValidate = 1 WHERE UserId = ? ; DELETE FROM Validate_email WHERE UserId = ?',
-              [[result[0].UserId], [result[0].UserId]],
-              (err, result) => {
-                if (err) {
-                  error.handleError(res, err, 'Internal error', 500, connection)
-                } else {
-                  connection.release()
-                  return res.json({ auth: true })
-                }
-              },
-            )
-          } else {
-            //no uuid found
-            connection.release()
-            return res.status(401).json({
-              err: 'Not authorized',
-            })
-          }
-        },
-      )
-    }
-  })
-}
 exports.forgotPassword = (req, res) => {
   const { email } = req.body
   pool.getConnection((err, connection) => {
@@ -256,16 +215,6 @@ exports.forgotPassword = (req, res) => {
                 result[0].UserName,
                 'http://localhost:3000/recoverPassword/?uuid=' + uuid,
               ),
-              attachments: [
-                {
-                  filename: 'Logo.png',
-                  path: path.join(
-                    __dirname,
-                    '../utility/template/matchaMail.png',
-                  ),
-                  cid: 'logo',
-                },
-              ],
             }
             transporter.sendMail(mailOptions)
             connection.query(
