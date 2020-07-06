@@ -34,7 +34,11 @@ exports.signup = (req, res) => {
   var imageBuffer = decodeBase64Image(base64Image)
   var imageTypeDetected = imageBuffer.type.match(imageTypeRegularExpression)
   var Path =
-    __dirname + `/../images/${pseudo}/` + pseudo + '.' + imageTypeDetected[1]
+    __dirname +
+    `/../images/${pseudo}/` +
+    'photoProfile' +
+    '.' +
+    imageTypeDetected[1]
   try {
     require('fs').writeFile(Path, imageBuffer.data, function () {
       console.log(
@@ -84,17 +88,8 @@ exports.signup = (req, res) => {
                   error.handleError(res, err, 'Internal error', 500, connection)
                 } else {
                   connection.query(
-                    'INSERT INTO User (Uuid, Email, Password, UserName, FirstName, LastName, EmailValidate, ImageProfile) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                    [
-                      userUuid,
-                      email,
-                      hash,
-                      pseudo,
-                      firstName,
-                      lastName,
-                      1,
-                      Path,
-                    ],
+                    'INSERT INTO User (Uuid, Email, Password, UserName, FirstName, LastName, ImageProfile) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                    [userUuid, email, hash, pseudo, firstName, lastName, Path],
                     (err, result) => {
                       if (err) {
                         error.handleError(
@@ -124,7 +119,7 @@ exports.signup = (req, res) => {
 
 exports.signin = async (req, res) => {
   const { pseudo, password } = req.body
-
+  console.log(req.body)
   pool.getConnection((err, connection) => {
     if (err) {
       return res.status(500).json({
@@ -132,7 +127,7 @@ exports.signin = async (req, res) => {
       })
     } else {
       connection.query(
-        'SELECT UserId, UserName, Password, EmailValidate, Uuid FROM User WHERE UserName = ?',
+        'SELECT UserId, Language, UserName, Password, Uuid FROM User WHERE UserName = ?',
         [pseudo],
         async (err, result) => {
           if (err) {
@@ -147,6 +142,7 @@ exports.signin = async (req, res) => {
             )
           } else if (result.length === 1) {
             const userUuid = result[0].Uuid
+            const lg = result[0].Language
             try {
               const match = await bcrypt.compare(
                 password,
@@ -159,6 +155,7 @@ exports.signin = async (req, res) => {
                   token: token,
                   user: {
                     _id: userUuid,
+                    _lg: lg,
                   },
                   msg: 'Authentification réussie',
                 })
@@ -376,6 +373,34 @@ exports.logout = (req, res) => {
             connection.release()
             return res.json({
               msg: 'Deconnexion réussie',
+            })
+          }
+        },
+      )
+    }
+  })
+}
+
+exports.lang = (req, res) => {
+  const { userUuid } = req.body
+  console.log(userUuid)
+  pool.getConnection((err, connection) => {
+    if (err) {
+      return res.status(500).json({
+        err: 'Internal error - Db down',
+      })
+    } else {
+      connection.query(
+        'SELECT Language FROM User WHERE `Uuid` = ?',
+        [userUuid],
+        (err, result) => {
+          if (err) {
+            error.handleError(res, err, 'Internal error', 500, connection)
+          } else {
+            const lg = result[0].Language
+            connection.release()
+            return res.json({
+              Language: lg,
             })
           }
         },
