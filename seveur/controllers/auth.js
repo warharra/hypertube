@@ -84,17 +84,8 @@ exports.signup = (req, res) => {
                   error.handleError(res, err, 'Internal error', 500, connection)
                 } else {
                   connection.query(
-                    'INSERT INTO User (Uuid, Email, Password, UserName, FirstName, LastName, EmailValidate, ImageProfile) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                    [
-                      userUuid,
-                      email,
-                      hash,
-                      pseudo,
-                      firstName,
-                      lastName,
-                      1,
-                      Path,
-                    ],
+                    'INSERT INTO User (Uuid, Email, Password, UserName, FirstName, LastName, ImageProfile) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                    [userUuid, email, hash, pseudo, firstName, lastName, Path],
                     (err, result) => {
                       if (err) {
                         error.handleError(
@@ -132,7 +123,7 @@ exports.signin = async (req, res) => {
       })
     } else {
       connection.query(
-        'SELECT UserId, UserName, Password, EmailValidate, Uuid FROM User WHERE UserName = ?',
+        'SELECT UserId, UserName, Password, Uuid FROM User WHERE UserName = ?',
         [pseudo],
         async (err, result) => {
           if (err) {
@@ -433,4 +424,35 @@ exports.logout = (req, res) => {
       )
     }
   })
+}
+
+exports.lang = (req, res) => {
+  const { userUuid } = req.body
+
+  pool.getConnection((err, connection) => {
+    if (err) {
+      return res.status(500).json({
+        err: 'Internal error - Db down',
+      })
+    } else {
+      connection.query(
+        'SELECT Language FROM User WHERE  Uuid = ?',
+        [userUuid],
+        (err, result) => {
+          if (err) {
+            error.handleError(res, err, 'Internal error', 500, connection)
+          } else {
+            connection.release()
+            return res.json({
+              lg: result[0].Language,
+            })
+          }
+        },
+      )
+    }
+  })
+}
+
+exports.changePage = (req, res) => {
+  return res.json({ auth: true })
 }

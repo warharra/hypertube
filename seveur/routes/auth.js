@@ -8,6 +8,8 @@ const {
   forgotPassword,
   recoverPassword,
   logout,
+  changePage,
+  lang,
 } = require('../controllers/auth')
 
 const {
@@ -25,5 +27,7 @@ router.post('/verifyAccount', verifyAccount)
 router.post('/forgotPassword', forgotPasswordValidator, forgotPassword)
 router.post('/recoverPassword', recoverPasswordValidator, recoverPassword)
 router.post('/verifyToken', verifyToken)
+router.post('/changePage', verifyToken, changePage)
+router.post('/lang', verifyToken, lang)
 
 module.exports = router
