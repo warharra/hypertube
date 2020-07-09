@@ -165,6 +165,7 @@ exports.readImage = (req, res) => {
 }
 
 exports.readProfile = async (req, res) => {
+  console.log('readProfile *********************8')
   pool.getConnection((err, connection) => {
     if (err) {
       error.handleError(res, err, 'Internal error', 500, connection)
@@ -177,11 +178,12 @@ exports.readProfile = async (req, res) => {
             error.handleError(res, err, 'Intenal error', 500, connection)
           } else {
             connection.release()
+            console.log(result)
             return res.json({
+              email: result[0].Email,
+              pseudo: result[0].UserName,
               firstName: result[0].FirstName,
               lastName: result[0].LastName,
-              pseudo: result[0].UserName,
-              email: result[0].Email,
               language: result[0].Language,
             })
           }

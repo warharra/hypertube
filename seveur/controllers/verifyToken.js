@@ -22,13 +22,15 @@ exports.verifyToken = (req, res, next) => {
         error.handleError(res, err, 'Internal error', 500, connection)
       } else {
         connection.query(
-          `SELECT UserName FROM user  WHERE Uuid = ?;`,
+          `SELECT UserName, Language FROM user WHERE Uuid = ?;`,
           [req.userUuid],
           (err, result) => {
             if (err) {
               error.handleError(res, err, 'Internal error', 500, connection)
             } else {
               req.userName = result[0].UserName
+              req.lang = result[0].Language
+              console.log(req.lang)
               connection.release
             }
           },

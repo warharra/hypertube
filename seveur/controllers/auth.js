@@ -17,11 +17,14 @@ const generateJwt = (userUuid) => {
 exports.signup = (req, res) => {
   const { email, pseudo, password, firstName, lastName, base64Image } = req.body
   let uuid = ''
+
   function decodeBase64Image(dataString) {
     var matches = dataString.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/)
     var response = {}
     if (matches.length !== 3) {
-      return new Error('Invalid input string')
+      return res.json({
+        err: 'Invalid input string',
+      })
     }
     response.type = matches[1]
     response.data = new Buffer(matches[2], 'base64')
@@ -47,7 +50,7 @@ exports.signup = (req, res) => {
       )
     })
   } catch (error) {
-    console.log('ERROR:', error)
+    console.log(error)
   }
   pool.getConnection((err, connection) => {
     if (err) {
@@ -66,7 +69,7 @@ exports.signup = (req, res) => {
           error.handleError(
             res,
             err,
-            'Cet email a déjà un compte associé.',
+            ' This email already has an associated account.',
             409,
             connection,
           )
@@ -74,7 +77,7 @@ exports.signup = (req, res) => {
           error.handleError(
             res,
             err,
-            "Ce pseudo n'est pas disponible.",
+            'This nickname is not available.',
             409,
             connection,
           )
@@ -102,7 +105,7 @@ exports.signup = (req, res) => {
                       } else {
                         connection.release()
                         return res.json({
-                          msg: `okkkkkk`,
+                          msg: `Success`,
                         })
                       }
                     },
@@ -136,7 +139,7 @@ exports.signin = async (req, res) => {
             error.handleError(
               res,
               err,
-              'Ce pseudo ne correspond à aucun compte. Veuillez créer un compte',
+              'This userName does not correspond to any account. Please create an account',
               400,
               connection,
             )
@@ -157,13 +160,13 @@ exports.signin = async (req, res) => {
                     _id: userUuid,
                     _lg: lg,
                   },
-                  msg: 'Authentification réussie',
+                  msg: 'successful authentication',
                 })
               } else {
                 connection.release()
                 return res.status(401).json({
                   token: null,
-                  err: 'Le mot de passe entré est incorrect.',
+                  err: 'The password entered is incorrect.',
                 })
               }
             } catch (err) {
@@ -197,7 +200,7 @@ exports.forgotPassword = (req, res) => {
             error.handleError(
               res,
               err,
-              "L'email indiqué n'existe pas",
+              'The specified email does not exist',
               400,
               connection,
             )
@@ -235,29 +238,9 @@ exports.forgotPassword = (req, res) => {
                         )
                       } else {
                         res.json({
-                          msg: `Un email a été envoyé à ${email} afin de réinitialiser votre mot de passe`,
+                          msg: `An email has been sent to ${email} in order to reset your passwor.`,
                         })
                         connection.release()
-                      }
-                    },
-                  )
-                } else {
-                  connection.query(
-                    'INSERT INTO `recover_password` (UserId, Uuid) VALUES (?, ?)',
-                    [UserId, uuid],
-                    (err, result) => {
-                      if (err) {
-                        error.handleError(
-                          res,
-                          err,
-                          'Internal error',
-                          500,
-                          connection,
-                        )
-                      } else {
-                        res.json({
-                          msg: `Un email a été envoyé à ${email} afin de réinitialiser votre mot de passe`,
-                        })
                       }
                     },
                   )
@@ -289,7 +272,7 @@ exports.recoverPassword = (req, res) => {
             error.handleError(
               res,
               err,
-              'Opération non autorisée',
+              'Unauthorized transaction',
               400,
               connection,
             )
@@ -336,7 +319,7 @@ exports.recoverPassword = (req, res) => {
                               } else {
                                 connection.release()
                                 return res.json({
-                                  msg: 'Votre mot de passe a bien été modifié',
+                                  msg: 'Your password has been changed',
                                 })
                               }
                             },
