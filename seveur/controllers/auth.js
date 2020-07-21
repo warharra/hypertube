@@ -17,11 +17,14 @@ const generateJwt = (userUuid) => {
 exports.signup = (req, res) => {
   const { email, pseudo, password, firstName, lastName, base64Image } = req.body
   let uuid = ''
+
   function decodeBase64Image(dataString) {
     var matches = dataString.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/)
     var response = {}
     if (matches.length !== 3) {
-      return new Error('Invalid input string')
+      return res.json({
+        err: 'Invalid input string',
+      })
     }
     response.type = matches[1]
     response.data = new Buffer(matches[2], 'base64')
@@ -34,7 +37,11 @@ exports.signup = (req, res) => {
   var imageBuffer = decodeBase64Image(base64Image)
   var imageTypeDetected = imageBuffer.type.match(imageTypeRegularExpression)
   var Path =
-    __dirname + `/../images/${pseudo}/` + pseudo + '.' + imageTypeDetected[1]
+    __dirname +
+    `/../images/${pseudo}/` +
+    'photoProfile' +
+    '.' +
+    imageTypeDetected[1]
   try {
     require('fs').writeFile(Path, imageBuffer.data, function () {
       console.log(
@@ -43,7 +50,7 @@ exports.signup = (req, res) => {
       )
     })
   } catch (error) {
-    console.log('ERROR:', error)
+    console.log(error)
   }
   pool.getConnection((err, connection) => {
     if (err) {
@@ -62,7 +69,7 @@ exports.signup = (req, res) => {
           error.handleError(
             res,
             err,
-            'Cet email a déjà un compte associé.',
+            ' This email already has an associated account.',
             409,
             connection,
           )
@@ -70,7 +77,7 @@ exports.signup = (req, res) => {
           error.handleError(
             res,
             err,
-            "Ce pseudo n'est pas disponible.",
+            'This nickname is not available.',
             409,
             connection,
           )
@@ -84,17 +91,8 @@ exports.signup = (req, res) => {
                   error.handleError(res, err, 'Internal error', 500, connection)
                 } else {
                   connection.query(
-                    'INSERT INTO User (Uuid, Email, Password, UserName, FirstName, LastName, EmailValidate, ImageProfile) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
-                    [
-                      userUuid,
-                      email,
-                      hash,
-                      pseudo,
-                      firstName,
-                      lastName,
-                      1,
-                      Path,
-                    ],
+                    'INSERT INTO User (Uuid, Email, Password, UserName, FirstName, LastName, ImageProfile) VALUES (?, ?, ?, ?, ?, ?, ?, ?)',
+                    [userUuid, email, hash, pseudo, firstName, lastName, Path],
                     (err, result) => {
                       if (err) {
                         error.handleError(
@@ -107,7 +105,7 @@ exports.signup = (req, res) => {
                       } else {
                         connection.release()
                         return res.json({
-                          msg: `okkkkkk`,
+                          msg: `Success`,
                         })
                       }
                     },
@@ -124,7 +122,7 @@ exports.signup = (req, res) => {
 
 exports.signin = async (req, res) => {
   const { pseudo, password } = req.body
-
+  console.log(req.body)
   pool.getConnection((err, connection) => {
     if (err) {
       return res.status(500).json({
@@ -132,7 +130,7 @@ exports.signin = async (req, res) => {
       })
     } else {
       connection.query(
-        'SELECT UserId, UserName, Password, EmailValidate, Uuid FROM User WHERE UserName = ?',
+        'SELECT UserId, Language, UserName, Password, Uuid FROM User WHERE UserName = ?',
         [pseudo],
         async (err, result) => {
           if (err) {
@@ -141,12 +139,13 @@ exports.signin = async (req, res) => {
             error.handleError(
               res,
               err,
-              'Ce pseudo ne correspond à aucun compte. Veuillez créer un compte',
+              'This userName does not correspond to any account. Please create an account',
               400,
               connection,
             )
           } else if (result.length === 1) {
             const userUuid = result[0].Uuid
+            const lg = result[0].Language
             try {
               const match = await bcrypt.compare(
                 password,
@@ -159,14 +158,15 @@ exports.signin = async (req, res) => {
                   token: token,
                   user: {
                     _id: userUuid,
+                    _lg: lg,
                   },
-                  msg: 'Authentification réussie',
+                  msg: 'successful authentication',
                 })
               } else {
                 connection.release()
                 return res.status(401).json({
                   token: null,
-                  err: 'Le mot de passe entré est incorrect.',
+                  err: 'The password entered is incorrect.',
                 })
               }
             } catch (err) {
@@ -182,47 +182,6 @@ exports.signin = async (req, res) => {
   })
 }
 
-exports.verifyAccount = (req, res) => {
-  const { uuid } = req.body
-
-  pool.getConnection((err, connection) => {
-    if (err) {
-      return res.status(500).json({
-        err: 'Internal error - Db down',
-      })
-    } else {
-      connection.query(
-        'SELECT * FROM User INNER JOIN Validate_email ON User.UserId = Validate_email.UserId WHERE Validate_email.Uuid = ?',
-        [uuid],
-        (err, result) => {
-          if (err) {
-            error.handleError(res, err, 'Internal error', 500, connection)
-          } else if (result.length != 0) {
-            //uuid found
-            connection.query(
-              'UPDATE User SET EmailValidate = 1 WHERE UserId = ? ; DELETE FROM Validate_email WHERE UserId = ?',
-              [[result[0].UserId], [result[0].UserId]],
-              (err, result) => {
-                if (err) {
-                  error.handleError(res, err, 'Internal error', 500, connection)
-                } else {
-                  connection.release()
-                  return res.json({ auth: true })
-                }
-              },
-            )
-          } else {
-            //no uuid found
-            connection.release()
-            return res.status(401).json({
-              err: 'Not authorized',
-            })
-          }
-        },
-      )
-    }
-  })
-}
 exports.forgotPassword = (req, res) => {
   const { email } = req.body
   pool.getConnection((err, connection) => {
@@ -241,7 +200,7 @@ exports.forgotPassword = (req, res) => {
             error.handleError(
               res,
               err,
-              "L'email indiqué n'existe pas",
+              'The specified email does not exist',
               400,
               connection,
             )
@@ -256,16 +215,6 @@ exports.forgotPassword = (req, res) => {
                 result[0].UserName,
                 'http://localhost:3000/recoverPassword/?uuid=' + uuid,
               ),
-              attachments: [
-                {
-                  filename: 'Logo.png',
-                  path: path.join(
-                    __dirname,
-                    '../utility/template/matchaMail.png',
-                  ),
-                  cid: 'logo',
-                },
-              ],
             }
             transporter.sendMail(mailOptions)
             connection.query(
@@ -289,29 +238,9 @@ exports.forgotPassword = (req, res) => {
                         )
                       } else {
                         res.json({
-                          msg: `Un email a été envoyé à ${email} afin de réinitialiser votre mot de passe`,
+                          msg: `An email has been sent to ${email} in order to reset your passwor.`,
                         })
                         connection.release()
-                      }
-                    },
-                  )
-                } else {
-                  connection.query(
-                    'INSERT INTO `recover_password` (UserId, Uuid) VALUES (?, ?)',
-                    [UserId, uuid],
-                    (err, result) => {
-                      if (err) {
-                        error.handleError(
-                          res,
-                          err,
-                          'Internal error',
-                          500,
-                          connection,
-                        )
-                      } else {
-                        res.json({
-                          msg: `Un email a été envoyé à ${email} afin de réinitialiser votre mot de passe`,
-                        })
                       }
                     },
                   )
@@ -343,7 +272,7 @@ exports.recoverPassword = (req, res) => {
             error.handleError(
               res,
               err,
-              'Opération non autorisée',
+              'Unauthorized transaction',
               400,
               connection,
             )
@@ -390,7 +319,7 @@ exports.recoverPassword = (req, res) => {
                               } else {
                                 connection.release()
                                 return res.json({
-                                  msg: 'Votre mot de passe a bien été modifié',
+                                  msg: 'Your password has been changed',
                                 })
                               }
                             },
@@ -427,6 +356,34 @@ exports.logout = (req, res) => {
             connection.release()
             return res.json({
               msg: 'Deconnexion réussie',
+            })
+          }
+        },
+      )
+    }
+  })
+}
+
+exports.lang = (req, res) => {
+  const { userUuid } = req.body
+  console.log(userUuid)
+  pool.getConnection((err, connection) => {
+    if (err) {
+      return res.status(500).json({
+        err: 'Internal error - Db down',
+      })
+    } else {
+      connection.query(
+        'SELECT Language FROM User WHERE `Uuid` = ?',
+        [userUuid],
+        (err, result) => {
+          if (err) {
+            error.handleError(res, err, 'Internal error', 500, connection)
+          } else {
+            const lg = result[0].Language
+            connection.release()
+            return res.json({
+              Language: lg,
             })
           }
         },
