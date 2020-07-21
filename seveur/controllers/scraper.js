@@ -62,7 +62,7 @@ exports.getComment = (req, res) => {
                 comment: e.comment,
               }
             })
-
+            console.log(tabComment)
             connection.release
             return res.json(tabComment)
           }
