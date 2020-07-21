@@ -1,12 +1,13 @@
 const express = require('express')
 const router = express.Router()
 const { verifyToken } = require('../controllers/verifyToken')
-const { isAuthenticated } = require('../controllers/scraper')
+const {
+  isAuthenticated,
+  sendComment,
+  getComment,
+} = require('../controllers/scraper')
 
 router.post('/isAuthenticated', verifyToken, isAuthenticated)
-
-// router.get('/searchMovie/:title', verifyToken, searchMovies)
-
-// router.get('/movie/:imdbID', verifyToken, getMovie)
-
+router.post('/sendComment', verifyToken, sendComment)
+router.post('/getComment', verifyToken, getComment)
 module.exports = router

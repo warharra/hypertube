@@ -9,3 +9,59 @@ const cheerio = require('cheerio')
 exports.isAuthenticated = (req, res) => {
   return res.json({ auth: true })
 }
+
+exports.sendComment = (req, res) => {
+  const { movie_id, comment } = req.body.data
+
+  pool.getConnection((err, connection) => {
+    if (err) {
+      error.handleError(res, err, 'Internal error', 500, connection)
+    } else {
+      connection.query(
+        `SELECT UserName FROM user WHERE Uuid= ?`,
+        [req.userUuid],
+        (err, result) => {
+          if (err) {
+            error.handleError(res, err, 'Internal error', 500, connection)
+          } else {
+            connection.query(
+              `INSERT INTO comment(userName, movie_id, comment) VALUES (?, ?, ?)`,
+              [result[0], movie_id, comment],
+              (err, result) => {
+                if (err) {
+                  error.handleError(res, err, 'Internal error', 500, connection)
+                } else {
+                  connection.release
+                  return res.json({ msg: 'comment save' })
+                }
+              },
+            )
+          }
+        },
+      )
+    }
+  })
+}
+
+exports.getComment = (req, res) => {
+  const { movie_id } = req.body
+  pool.getConnection((err, connection) => {
+    if (err) {
+      error.handleError(res, err, 'Internal error', 500, connection)
+    } else {
+      connection.query(
+        `SELECT comment, user_id FROM comment WHERE movie_id= ?`,
+        [movie_id],
+        (err, result) => {
+          if (err) {
+            error.handleError(res, err, 'Internal error', 500, connection)
+          } else {
+            console.log(result)
+            connection.release
+            return res.json({ msg: 'get comment' })
+          }
+        },
+      )
+    }
+  })
+}
