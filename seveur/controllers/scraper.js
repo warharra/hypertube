@@ -12,7 +12,6 @@ exports.isAuthenticated = (req, res) => {
 
 exports.sendComment = (req, res) => {
   const { movie_id, comment } = req.body.data
-
   pool.getConnection((err, connection) => {
     if (err) {
       error.handleError(res, err, 'Internal error', 500, connection)
@@ -24,9 +23,10 @@ exports.sendComment = (req, res) => {
           if (err) {
             error.handleError(res, err, 'Internal error', 500, connection)
           } else {
+            console.log(result)
             connection.query(
               `INSERT INTO comment(userName, movie_id, comment) VALUES (?, ?, ?)`,
-              [result[0], movie_id, comment],
+              [result[0].UserName, movie_id, comment],
               (err, result) => {
                 if (err) {
                   error.handleError(res, err, 'Internal error', 500, connection)
@@ -50,15 +50,21 @@ exports.getComment = (req, res) => {
       error.handleError(res, err, 'Internal error', 500, connection)
     } else {
       connection.query(
-        `SELECT comment, user_id FROM comment WHERE movie_id= ?`,
+        `SELECT comment, UserName FROM comment WHERE movie_id= ?`,
         [movie_id],
         (err, result) => {
           if (err) {
             error.handleError(res, err, 'Internal error', 500, connection)
           } else {
-            console.log(result)
+            let tabComment = result.map((e) => {
+              return {
+                userName: e.UserName,
+                comment: e.comment,
+              }
+            })
+
             connection.release
-            return res.json({ msg: 'get comment' })
+            return res.json(tabComment)
           }
         },
       )

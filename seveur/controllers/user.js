@@ -99,7 +99,6 @@ exports.uploadProfileImage = (req, res) => {
   let userUuid = req.userUuid
   let file = req.files.photo
   const types = ['.png', '.jpeg', '.gif', '.svg']
-  //Check format de l image and size
 
   if (types.indexOf(path.extname(file.name)) === -1) {
     return res.status(400).json({
@@ -165,7 +164,6 @@ exports.readImage = (req, res) => {
 }
 
 exports.readProfile = async (req, res) => {
-  console.log('readProfile *********************8')
   pool.getConnection((err, connection) => {
     if (err) {
       error.handleError(res, err, 'Internal error', 500, connection)
